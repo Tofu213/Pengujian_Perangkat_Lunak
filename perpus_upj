@@ -1,0 +1,65 @@
+-- 1. Membuat Database
+CREATE DATABASE perpus_upj;
+USE perpus_upj;
+
+-- 2. Tabel Admin (Pustakawan)
+-- Berfungsi untuk mengelola data master dan memverifikasi transaksi
+CREATE TABLE admin (
+    id_admin INT AUTO_INCREMENT PRIMARY KEY,
+    username VARCHAR(50) NOT NULL UNIQUE,
+    password VARCHAR(255) NOT NULL, -- Menggunakan varchar 255 untuk mendukung enkripsi (hashing)
+    nama_admin VARCHAR(100) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB;
+
+-- 3. Tabel Mahasiswa (Anggota Perpustakaan)
+-- Digunakan untuk login mahasiswa, pencarian buku, dan pengajuan pinjaman
+CREATE TABLE mahasiswa (
+    nim VARCHAR(15) PRIMARY KEY, -- NIM digunakan sebagai Primary Key yang unik
+    nama_mahasiswa VARCHAR(100) NOT NULL,
+    prodi VARCHAR(50) NOT NULL,
+    username VARCHAR(50) NOT NULL UNIQUE,
+    password VARCHAR(255) NOT NULL,
+    status_aktif ENUM('Aktif', 'Nonaktif') DEFAULT 'Aktif',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB;
+
+-- 4. Tabel Buku
+-- Menyimpan katalog buku dan jumlah stok yang tersedia
+CREATE TABLE buku (
+    id_buku INT AUTO_INCREMENT PRIMARY KEY,
+    isbn VARCHAR(20) UNIQUE,
+    judul VARCHAR(255) NOT NULL,
+    pengarang VARCHAR(100) NOT NULL,
+    penerbit VARCHAR(100),
+    tahun_terbit YEAR,
+    stok INT NOT NULL DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB;
+
+-- 5. Tabel Peminjaman
+-- Mencatat pengajuan pinjaman oleh mahasiswa beserta tenggat waktunya
+CREATE TABLE peminjaman (
+    id_peminjaman INT AUTO_INCREMENT PRIMARY KEY,
+    nim VARCHAR(15) NOT NULL,
+    id_buku INT NOT NULL,
+    tgl_pinjam DATE NOT NULL,
+    tgl_kembali_seharusnya DATE NOT NULL, -- Batas waktu pengembalian buku
+    status_pinjam ENUM('Menunggu Persetujuan', 'Dipinjam', 'Ditolak', 'Dikembalikan') DEFAULT 'Menunggu Persetujuan',
+    FOREIGN KEY (nim) REFERENCES mahasiswa(nim) ON UPDATE CASCADE ON DELETE RESTRICT,
+    FOREIGN KEY (id_buku) REFERENCES buku(id_buku) ON UPDATE CASCADE ON DELETE RESTRICT
+) ENGINE=InnoDB;
+
+-- 6. Tabel Pengembalian
+-- Mencatat aktivitas pengembalian, kalkulasi hari terlambat, denda, dan admin yang memproses.
+-- Tabel ini berelasi erat dengan pengujian fungsi logika bisnis denda (White Box Testing)
+CREATE TABLE pengembalian (
+    id_pengembalian INT AUTO_INCREMENT PRIMARY KEY,
+    id_peminjaman INT NOT NULL,
+    tgl_kembali_aktual DATE NOT NULL, -- Tanggal asli saat buku dikembalikan
+    keterlambatan_hari INT DEFAULT 0, -- Dihitung otomatis lewat PHP/Trigger (tgl_kembali_aktual - tgl_kembali_seharusnya)
+    total_denda DECIMAL(10, 2) DEFAULT 0.00, -- Nominal denda berdasarkan hari terlambat
+    id_admin INT NOT NULL, -- Admin yang memverifikasi pengembalian buku
+    FOREIGN KEY (id_peminjaman) REFERENCES peminjaman(id_peminjaman) ON UPDATE CASCADE ON DELETE RESTRICT,
+    FOREIGN KEY (id_admin) REFERENCES admin(id_admin) ON UPDATE CASCADE ON DELETE RESTRICT
+) ENGINE=InnoDB;
