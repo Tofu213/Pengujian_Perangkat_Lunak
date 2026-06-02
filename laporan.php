@@ -1,6 +1,6 @@
 <?php
 session_start();
-// Validasi akses admin
+// Validasi akses khusus admin
 if (!isset($_SESSION['is_logged_in']) || $_SESSION['role'] !== 'admin') {
     header("Location: login.php");
     exit;
@@ -8,6 +8,7 @@ if (!isset($_SESSION['is_logged_in']) || $_SESSION['role'] !== 'admin') {
 
 include "koneksi.php";
 
+// Query untuk mengambil semua riwayat pengembalian dan denda dari semua mahasiswa
 $query = "SELECT p.tgl_pinjam, pg.tgl_kembali_aktual, b.judul, m.nama_mahasiswa, pg.keterlambatan_hari, pg.total_denda 
           FROM pengembalian pg 
           JOIN peminjaman p ON pg.id_peminjaman = p.id_peminjaman 
@@ -22,11 +23,10 @@ $result = mysqli_query($koneksi, $query);
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Laporan Transaksi - Admin Perpus</title>
-    <!-- Memanggil CSS Bootstrap 5 -->
+    <title>Laporan Transaksi & Denda - Admin Perpus</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
-        /* Sembunyikan elemen tertentu saat mode cetak (print) */
+        /* CSS untuk menyembunyikan elemen tertentu (seperti tombol dan navbar) saat laporan dicetak/print */
         @media print {
             .no-print {
                 display: none !important;
@@ -34,6 +34,9 @@ $result = mysqli_query($koneksi, $query);
             .card {
                 border: none !important;
                 box-shadow: none !important;
+            }
+            body {
+                background-color: white !important;
             }
         }
     </style>
@@ -63,13 +66,13 @@ $result = mysqli_query($koneksi, $query);
 <div class="container mt-4">
     <div class="card shadow-sm border-0">
         <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center p-3 no-print">
-            <h5 class="mb-0 fw-bold">Rekapitulasi Laporan Transaksi</h5>
+            <h5 class="mb-0 fw-bold">Rekapitulasi Laporan Transaksi & Denda</h5>
             <div>
                 <!-- Tombol Back / Kembali ke Dashboard -->
                 <a href="dashboard_admin.php" class="btn btn-dark btn-sm fw-semibold me-2">
                     &larr; Kembali
                 </a>
-                <!-- Tombol Cetak -->
+                <!-- Tombol Cetak PDF/Printer -->
                 <button onclick="window.print()" class="btn btn-light btn-sm fw-semibold text-primary">
                     &#128424; Cetak Laporan
                 </button>
@@ -78,6 +81,7 @@ $result = mysqli_query($koneksi, $query);
         
         <div class="card-body p-4">
             
+            <!-- Header khusus saat dokumen dicetak -->
             <div class="text-center mb-4 d-none d-print-block">
                 <h4 class="fw-bold">LAPORAN TRANSAKSI PERPUSTAKAAN</h4>
                 <p class="mb-0">Universitas Pembangunan Jaya</p>
@@ -100,9 +104,11 @@ $result = mysqli_query($koneksi, $query);
                     <tbody>
                         <?php 
                         $no = 1;
-                        $total_semua_denda = 0;
+                        $total_semua_denda = 0; // Variabel penampung total denda
+                        
                         if (mysqli_num_rows($result) > 0) :
                             while($row = mysqli_fetch_assoc($result)): 
+                                // Menjumlahkan setiap denda dari tiap baris transaksi
                                 $total_semua_denda += $row['total_denda'];
                         ?>
                         <tr>
@@ -129,6 +135,8 @@ $result = mysqli_query($koneksi, $query);
                         </tr>
                         <?php endif; ?>
                     </tbody>
+                    
+                    <!-- Menampilkan Total Pendapatan Denda di bagian bawah tabel -->
                     <?php if (mysqli_num_rows($result) > 0) : ?>
                     <tfoot class="table-light">
                         <tr>
